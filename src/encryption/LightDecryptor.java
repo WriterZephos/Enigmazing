@@ -12,12 +12,14 @@ import java.util.Collections;
 import java.util.Formatter;
 import java.util.Scanner;
 
-public class Decryptor {
+public class LightDecryptor {
 	
 	private final int key1;
 	private final int key2;
 	
-	private final char[] chars = {
+	private final char[] chars;
+	
+	private final char[] DEFAULT = {
 			'N','a','Z','K','&','?','J','4','-','(','\'','$',
 			'0','S','5','x','m','H','u','*','}','@','i','#',
 			'l','<','E','R','9','=','6','7','o','z','k',':',
@@ -27,16 +29,31 @@ public class Decryptor {
 			'y',';',',','s','r',')','V','M',' ','D','w','n',
 			'!','{','h','G','>','_','W','^','3'};
 	
-	public Decryptor(int key1, int key2){
+	public LightDecryptor(int key1, int key2, char[] alphabet){
 		
-		for(int i = 2; i < key1+1 ; i++){
-			if(key1 % i == 0 && 94 % i == 0){
-				throw new java.lang.IllegalArgumentException("Invalid key. Key1 must be relatively prime to 94 (no common factors).");
-			}
-		}
-		
+		//if(!isValidKey(key1)) throw new java.lang.IllegalArgumentException("Invalid key. Key1 must be relatively prime to 94 (no common factors).");
 		this.key1 = key1;
 		this.key2 = key2;
+		this.chars = alphabet;
+		
+	}
+	
+	public LightDecryptor(int key1, int key2){
+
+		//if(!isValidKey(key1)) throw new java.lang.IllegalArgumentException("Invalid key. Key1 must be relatively prime to 94 (no common factors).");
+		this.key1 = key1;
+		this.key2 = key2;
+		this.chars = DEFAULT;
+	}
+	
+	private static boolean isValidKey(int key){
+		if(key <= 0) return false;
+		for(int i = 2; i < key+1 ; i++){
+			if(key % i == 0 && 94 % i == 0){
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	public String decipher(String s) {
@@ -57,34 +74,33 @@ public class Decryptor {
 			if(s.startsWith("l#g((c'n'*F!#gEg9")){
 				String[] tokens = s.split("~");
 				if(tokens[0].equals("l#g((c'n'*F!#gEg9")){
-				try{
-					StringBuilder sb = new StringBuilder();
-					temp1 = Integer.parseInt(decipher(tokens[1],73,99,false));
-					temp2 = Integer.parseInt(decipher(tokens[2],17,49,false));
-					for(int i = 3; i < tokens.length; i++){
-						sb.append(tokens[i]);
+					try{
+						StringBuilder sb = new StringBuilder();
+						temp1 = Integer.parseInt(decipher(tokens[1],73,99,false));
+						temp2 = Integer.parseInt(decipher(tokens[2],17,49,false));
+						for(int i = 3; i < tokens.length; i++){
+							sb.append(tokens[i]);
+							if(i < (tokens.length -1) ) sb.append("~");
+						}
+						tempString = sb.toString();
+					} catch(Exception ex){
+						
+						System.out.println(ex.getMessage());
+						ex.printStackTrace();
+						throw new java.lang.IllegalArgumentException("Invalid key. The encoded key was not found or is not valid.");
 					}
-					tempString = sb.toString();
-				} catch(Exception ex){
-					throw new java.lang.IllegalArgumentException("Invalid key. The encoded key was not found or is not valid.");
 				}
-			}
-		}
+			} 
 		}
 
 		
-		
-		for(int i = 2; i < temp1+1 ; i++){
-			if(temp1 % i == 0 && 94 % i == 0){
-				throw new java.lang.IllegalArgumentException("Invalid key. Multiplier must be relatively prime to 94.");
-			}
-		}
+		if(!isValidKey(temp1)) throw new java.lang.IllegalArgumentException("Invalid key. Multiplier must be relatively prime to 94.");
+
 		
 		char[] charArray = tempString.toCharArray();
 		char[] newCharArray = new char[tempString.length()];
 		BigInteger multiplyer = BigInteger.valueOf(temp1);
 		BigInteger mod = BigInteger.valueOf(94);
-		System.out.println(temp1);
 		int inverseMod = multiplyer.modInverse(mod).intValue();
 		
 		for(int i = 0; i < charArray.length; i++){
@@ -107,24 +123,32 @@ public class Decryptor {
 		return new String(newCharArray);	
 	}
 	
-	public void decipherFile(String input, String output) throws IOException{
+	public boolean decipherFile(String input, String output) throws IOException{
 		
-		decipherFile(input,output,false);
+		return decipherFile(input,output,false);
 	}
 	
-	public void decipherFile(String input, String output, boolean encodedKey) throws IOException{
+	public boolean decipherFile(String input, String output, boolean encodeKey) throws IOException{
 		
 		String filenameInput = input;
 		String filenameOutput = output;
+		File cypherTextFile = new File(filenameInput);
+		File plainTextFile = new File(filenameOutput);
+		
+		return decipherFile(cypherTextFile,plainTextFile,encodeKey);
+	}
+	
+	public boolean decipherFile(File inputFile, File outputFile, boolean encodedKey) throws IOException{
+		
 		StringBuilder sb = new StringBuilder();
 		String cypherText = null;
 		String plainText = null;
 		
-		File cypherTextFile = new File(filenameInput);
-		File plainTextFile = new File(filenameOutput);
+		File cypherTextFile = inputFile;
+		File plainTextFile = outputFile;
 		
 		if(!cypherTextFile.exists()){
-			throw new FileNotFoundException("Input file does not exist: " + input);
+			throw new FileNotFoundException("Input file does not exist: " + cypherTextFile.getAbsolutePath());
 		}
 		
 		try(Scanner reader = new Scanner(new BufferedReader(new FileReader(cypherTextFile)))){
@@ -136,24 +160,31 @@ public class Decryptor {
 			
 			cypherText = sb.toString();
 		}
+		
+		if(encodedKey && !cypherText.startsWith("l#g((c'n'*F!#gEg9")){
+			return false;
+			
+		}
 			
 		if(cypherText != null) plainText = decipher(cypherText, key1, key2,encodedKey);
 
 		if(!plainTextFile.exists()){
-			try (Formatter format = new Formatter(output)){
+			try (Formatter format = new Formatter(plainTextFile.getAbsolutePath())){
 				format.flush();
 				format.close();
 			}
-		}
+		} 
 		
 		try(FileWriter writer = new FileWriter(plainTextFile)){
 				writer.write(plainText);
 				writer.flush();
 		}
+		
+		return true;
 	}
 
-	static private void generateScrambledAlphabet(){
-		char[] chars = {'a','b','c','d','e','f','g',
+	public static char[] generateScrambledAlphabet(){
+		char[] tempChars = {'a','b','c','d','e','f','g',
 				'h','i','j','k','l','m','n','o','p',
 				'q','r','s','t','u','v','w','x','y','z','A','B','C','D','E','F','G',
 				'H','I','J','K','L','M','N','O','P',
@@ -162,12 +193,16 @@ public class Decryptor {
 				'&','^','-','_','+','=','\'',':',';','>','<','[',']','{','}','|'};
 		
 		ArrayList<Character> myList = new ArrayList<>();
-		for(char c : chars) myList.add(c);
+		for(char c : tempChars) myList.add(c);
 		
 		Collections.shuffle(myList);
-		for(char c : myList) System.out.print("'" + c + "',");
+		for(int i = 0; i < tempChars.length; i++) {
+			tempChars[i] = myList.get(i);
+			
+		}
 		
-		System.out.println(myList.size());
+		return tempChars;
+		
 	}
 	
 	public static void main(String[] args) {

@@ -34,8 +34,8 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.filechooser.FileFilter;
 
-import encryption.Decryptor;
-import encryption.Encryptor;
+import encryption.LightDecryptor;
+import encryption.LightEncryptor;
 import zui.ZComponentFactory;
 
 public class MainClass {
@@ -57,8 +57,8 @@ public class MainClass {
 	boolean editorWarned = false;
 	boolean fileWarned = false;
 
-	Encryptor encryptor;
-	Decryptor decipher;
+	LightEncryptor encryptor;
+	LightDecryptor decipher;
 	
 	
 	public MainClass(){
@@ -218,7 +218,6 @@ public class MainClass {
 				} catch(NumberFormatException e2){
 					editorKey1Field.setText("");
 					editorMessageLabel.setText("        Invalid key1 input.");
-					System.out.println(key1);
 					valid = false;
 				}
 				s = editorKey2Field.getText();
@@ -227,12 +226,11 @@ public class MainClass {
 				} catch(NumberFormatException e2){
 					editorKey2Field.setText("");
 					editorMessageLabel.setText("        Invalid key2 input.");
-					System.out.println(editorKey2Field.getText());
 					valid = false;
 				}
 				if(valid){
 					editorMessageLabel.setText("");
-					encryptor = new Encryptor(key1,key2);
+					encryptor = new LightEncryptor(key1,key2);
 					String plainText = textArea.getText();
 					String crypto = encryptor.encrypt(plainText,editorEncodeKeyCheckbox.isSelected());
 					textArea.setText(crypto);
@@ -247,13 +245,15 @@ public class MainClass {
 				boolean valid = true;
 				int key1 = 0;
 				int key2 = 0;
+				String s = editorKey1Field.getText();
+				String cypherText = textArea.getText();
 				if(!editorEncodeKeyCheckbox.isSelected()){
-					String s = editorKey1Field.getText();
 					try{
 						key1 = Integer.parseInt(s);
 						for(int i = 2; i < key1+1 ; i++){
 						if(key1 % i == 0 && 94 % i == 0){
 							editorKey1Field.setText("");
+							editorMessageLabel.setText("        Key 1 must not have any common factors with 94.");
 							valid = false;
 						}
 					}
@@ -270,11 +270,15 @@ public class MainClass {
 						editorMessageLabel.setText("        Invalid key2 input.");
 						valid = false;
 					}
+				} else {
+					if(!cypherText.startsWith("l#g((c'n'*F!#gEg9")) {
+						valid = false;
+						editorMessageLabel.setText("        An encoded key could not be found within the cypher text.");
+					}
 				}
 				if(valid){
 					editorMessageLabel.setText("");
-					decipher = new Decryptor(key1,key2);
-					String cypherText = textArea.getText();
+					decipher = new LightDecryptor(key1,key2);
 					String plainText = decipher.decipher(cypherText,editorEncodeKeyCheckbox.isSelected());
 					textArea.setText(plainText);
 				}
@@ -497,33 +501,32 @@ public class MainClass {
 				boolean valid = true;
 				int key1 = 0;
 				int key2 = 0;
-				if(!fileEncodeKeyCheckbox.isSelected()){
-					String s = fileKey1Field.getText();
-					try{
-						key1 = Integer.parseInt(s);
-						for(int i = 2; i < key1+1 ; i++){
-						if(key1 % i == 0 && 94 % i == 0){
-							fileKey1Field.setText("");
-							fileMessageLabel1.setText("Key 1 must not have any common factors with 94.");
-							fileMessageLabel2.setText("");
-							valid = false;
-						}
-					}
-					} catch(NumberFormatException e2){
+				
+				String s = fileKey1Field.getText();
+				try{
+					key1 = Integer.parseInt(s);
+					for(int i = 2; i < key1+1 ; i++){
+					if(key1 % i == 0 && 94 % i == 0){
 						fileKey1Field.setText("");
-						fileMessageLabel1.setText("Invalid key input.");
+						fileMessageLabel1.setText("Key 1 must not have any common factors with 94.");
 						fileMessageLabel2.setText("");
 						valid = false;
 					}
-					s = fileKey2Field.getText();
-					try{
-						key2 = Integer.parseInt(s);
-					} catch(NumberFormatException e2){
-						fileKey2Field.setText("");
-						fileMessageLabel1.setText("Invalid key input.");
-						fileMessageLabel2.setText("");
-						valid = false;
-					}
+				}
+				} catch(NumberFormatException e2){
+					fileKey1Field.setText("");
+					fileMessageLabel1.setText("Invalid key input.");
+					fileMessageLabel2.setText("");
+					valid = false;
+				}
+				s = fileKey2Field.getText();
+				try{
+					key2 = Integer.parseInt(s);
+				} catch(NumberFormatException e2){
+					fileKey2Field.setText("");
+					fileMessageLabel1.setText("Invalid key input.");
+					fileMessageLabel2.setText("");
+					valid = false;
 				}
 				
 				if(inputFile == null){
@@ -544,18 +547,18 @@ public class MainClass {
 				
 				if(valid){
 					fileMessageLabel1.setText("");
-					encryptor = new Encryptor(key1,key2);
+					encryptor = new LightEncryptor(key1,key2);
 					try {
 						encryptor.encryptFile(inputFile,outputFile,fileEncodeKeyCheckbox.isSelected());
+						fileMessageLabel2.setForeground(Color.GREEN);
+						fileMessageLabel2.setText("Encryption successful.");
 					} catch (IOException e1) {
+						fileMessageLabel2.setForeground(Color.RED);
 						fileMessageLabel2.setText("Encryption failed.");
 						e1.printStackTrace();
 					}
 					outputFile = null;
 					outputPathLabel.setText("");
-					fileMessageLabel1.setForeground(Color.GREEN);
-					fileMessageLabel2.setText("Encryption successful.");
-					fileMessageLabel1.setText("");
 				}
 			}});
 		
@@ -572,13 +575,13 @@ public class MainClass {
 					try{
 						key1 = Integer.parseInt(s);
 						for(int i = 2; i < key1+1 ; i++){
-						if(key1 % i == 0 && 94 % i == 0){
-							fileKey1Field.setText("");
-							fileMessageLabel1.setText("Key 1 must not have any common factors with 94.");
-							fileMessageLabel2.setText("");
-							valid = false;
+							if(key1 % i == 0 && 94 % i == 0){
+								fileKey1Field.setText("");
+								fileMessageLabel1.setText("Key 1 must not have any common factors with 94.");
+								fileMessageLabel2.setText("");
+								valid = false;
+							}
 						}
-					}
 					} catch(NumberFormatException e2){
 						fileKey1Field.setText("");
 						valid = false;
@@ -592,6 +595,9 @@ public class MainClass {
 						fileMessageLabel2.setText("");
 						valid = false;
 					}
+				} else {
+					key1 = 0;
+					key2 = 0;
 				}
 				
 				if(inputFile == null){
@@ -612,17 +618,23 @@ public class MainClass {
 				
 				if(valid){
 					fileMessageLabel1.setText("");
-					decipher = new Decryptor(key1,key2);
+					decipher = new LightDecryptor(key1,key2);
 					try {
-						decipher.decipherFile(inputFile,outputFile,fileEncodeKeyCheckbox.isSelected());
+						if(decipher.decipherFile(inputFile,outputFile,fileEncodeKeyCheckbox.isSelected())){
+							fileMessageLabel2.setForeground(Color.BLUE);
+							fileMessageLabel2.setText("Decryption successful.");
+						} else {
+							fileMessageLabel2.setForeground(Color.RED);
+							fileMessageLabel2.setText("An encoded key was not found within the cypher text.");
+						}
+						
 					} catch (IOException e1) {
+						fileMessageLabel2.setForeground(Color.RED);
 						fileMessageLabel2.setText("Decryption failed.");
 						e1.printStackTrace();
 					}
 					outputFile = null;
 					outputPathLabel.setText("");
-					fileMessageLabel1.setForeground(Color.BLUE);
-					fileMessageLabel2.setText("Decryption successful.");
 				}
 			}});
 		

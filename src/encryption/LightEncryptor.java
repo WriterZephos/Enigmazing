@@ -12,32 +12,50 @@ import java.util.Collections;
 import java.util.Formatter;
 import java.util.Scanner;
 
-public class Encryptor {
+public class LightEncryptor {
 	
 	private final int key1;
 	private final int key2;
 	
-	private final char[] chars = {'N','a','Z','K','&','?','J','4','-','(','\'','$',
-									'0','S','5','x','m','H','u','*','}','@','i','#',
-									'l','<','E','R','9','=','6','7','o','z','k',':',
-									']','c','Q','.','\n','/','e','f','v','p','%','F','j',
-									'"','I','t','L','\\','d','T','q','1','A','g','2',
-									'b','B','+','U','P','8','C','X','O','Y','[','|',
-									'y',';',',','s','r',')','V','M',' ','D','w','n',
-									'!','{','h','G','>','_','W','^','3'};
+	private final char[] chars;
 	
-	public Encryptor(int key1, int key2){
+	private final char[] DEFAULT = {
+			'N','a','Z','K','&','?','J','4','-','(','\'','$',
+			'0','S','5','x','m','H','u','*','}','@','i','#',
+			'l','<','E','R','9','=','6','7','o','z','k',':',
+			']','c','Q','.','\n','/','e','f','v','p','%','F','j',
+			'"','I','t','L','\\','d','T','q','1','A','g','2',
+			'b','B','+','U','P','8','C','X','O','Y','[','|',
+			'y',';',',','s','r',')','V','M',' ','D','w','n',
+			'!','{','h','G','>','_','W','^','3'};
+	
+	public LightEncryptor(int key1, int key2, char[] alphabet){
 		
-		for(int i = 2; i < key1+1 ; i++){
-			if(key1 % i == 0 && 94 % i == 0){
-				throw new java.lang.IllegalArgumentException("Invalid key parameter in constructor. Key1 must be relatively prime to 94 (no common factors).");
-			}
-		}
+		if(!isValidKey(key1)) throw new java.lang.IllegalArgumentException("Invalid key. Key1 must be relatively prime to 94 (no common factors).");
 		
 		this.key1 = key1;
 		this.key2 = key2;
+		this.chars = alphabet;
+	}
+	
+	public LightEncryptor(int key1, int key2){
+		
+		if(!isValidKey(key1)) throw new java.lang.IllegalArgumentException("Invalid key. Key1 must be relatively prime to 94 (no common factors).");
+		this.key1 = key1;
+		this.key2 = key2;
+		this.chars = DEFAULT;
 	}
 
+	private static boolean isValidKey(int key){
+		if(key <= 0) return false;
+		for(int i = 2; i < key+1 ; i++){
+			if(key % i == 0 && 94 % i == 0){
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	public String encrypt(String s, boolean encodeString){
 		return encrypt(s,key1,key2, encodeString);
 	}
@@ -48,12 +66,9 @@ public class Encryptor {
 	
 	public String encrypt(String s, int mult, int shift, boolean encodeKey){
 		
-		for(int i = 2; i < mult+1 ; i++){
-			if(mult % i == 0 && 94 % i == 0){
-				throw new java.lang.IllegalArgumentException("Invalid key. Multiplier must be relatively prime to 94.");
-			}
-		}
 		
+		if(!isValidKey(key1)) throw new java.lang.IllegalArgumentException("Invalid key. Multiplier must be relatively prime to 94.");
+	
 		char[] charArray = s.toCharArray();
 		char[] newCharArray = new char[s.length()];
 		
@@ -94,15 +109,24 @@ public class Encryptor {
 		
 		String filenameInput = input;
 		String filenameOutput = output;
+		File cypherTextFile = new File(filenameInput);
+		File plainTextFile = new File(filenameOutput);
+		
+		encryptFile(cypherTextFile,plainTextFile,encodeKey);
+	}
+	
+	public void encryptFile(File inputFile, File outputFile, boolean encodeKey) throws IOException{
+		
 		StringBuilder sb = new StringBuilder();
 		String plainText = null;
 		String cypherText = null;
 		
-		File plainTextFile = new File(filenameInput);
-		File cypherTextFile = new File(filenameOutput);
+		File plainTextFile = inputFile;
+		File cypherTextFile = outputFile;
+		
 		
 		if(!plainTextFile.exists()){
-			throw new FileNotFoundException("Input file does not exist: " + input);
+			throw new FileNotFoundException("Input file does not exist: " + plainTextFile.getAbsolutePath());
 		}
 		
 		try(Scanner reader = new Scanner(new BufferedReader(new FileReader(plainTextFile)))){
@@ -115,13 +139,13 @@ public class Encryptor {
 			plainText = sb.toString();
 			
 		}catch (FileNotFoundException e){
-			System.out.println("File was not found: " + filenameInput);
+			System.out.println("File was not found: " + plainTextFile.getAbsolutePath());
 		}
 			
 		if(plainText != null) cypherText = encrypt(plainText, key1, key2,encodeKey);
 
 		if(!cypherTextFile.exists()){
-			try (Formatter format = new Formatter(output);){
+			try (Formatter format = new Formatter(cypherTextFile.getAbsolutePath());){
 				format.flush();
 				format.close();
 			};
@@ -134,8 +158,8 @@ public class Encryptor {
 		
 	}
 	
-	private static void generateScrambledAlphabet(){
-		char[] chars = {'a','b','c','d','e','f','g',
+	public static char[] generateScrambledAlphabet(){
+		char[] tempChars = {'a','b','c','d','e','f','g',
 				'h','i','j','k','l','m','n','o','p',
 				'q','r','s','t','u','v','w','x','y','z','A','B','C','D','E','F','G',
 				'H','I','J','K','L','M','N','O','P',
@@ -144,12 +168,16 @@ public class Encryptor {
 				'&','^','-','_','+','=','\'',':',';','>','<','[',']','{','}','|'};
 		
 		ArrayList<Character> myList = new ArrayList<>();
-		for(char c : chars) myList.add(c);
+		for(char c : tempChars) myList.add(c);
 		
 		Collections.shuffle(myList);
-		for(char c : myList) System.out.print("'" + c + "',");
+		for(int i = 0; i < tempChars.length; i++) {
+			tempChars[i] = myList.get(i);
+			
+		}
 		
-		System.out.println(myList.size());
+		return tempChars;
+		
 	}
 	
 	public static void main(String[] args) {
