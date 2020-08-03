@@ -3,4 +3,6 @@ Enigmazing is a small, simple encryption app built in Java that was inspired by 
 
 The app has two modes: normal and embedded key mode. In embedded key mode, the encryption keys would be embedded in the cipher text, allowing anyone who had this app to decrypt it.
 
+You can download the app [here](https://github.com/WriterZephos/Enigmazing/raw/master/Enigmazing.jar) (Java executable).
+
 ![screen shot](https://github.com/WriterZephos/Enigmazing/blob/master/Enigmazing.png?raw=true)
